@@ -1,0 +1,51 @@
+// unsigned multiplication
+EXT #0xF5
+MOV R0, #0x8C // 0xF58C = 62860 (unsigned)
+EXT #0xB7
+MOV R1, #0xCE // 0xB7CE = 47054 (unsigned)
+MOV R6, #0
+MOV R7, #0 // initializing final result = R7:R6 (32 bit)
+CMP R7, #1 // set FlagC = 0
+MOV R2, R0 
+MOVC2 R2, R1 // R1[7:0] x R0[3:0] which is 11:0
+ADD R6, R2 // add 11:0 to final result
+MOV R2, R0
+MOVC3 R2, R1 // R1[7:0] x R0[7:4] which is 15:4
+ADD R6, R2 // add 15:4 to final result
+MOV R2, R0 
+MOVC4 R2, R1 // R1[7:0] x R0[11:8] which is 19:8 (but those bits are at 11:0)
+MOVC6 R3, R2 // stores 19:16; LSL R2, #8; moves shifted bits to R3
+MOV R4, R0 // R0 is irrelevant; moves stored bits to R4
+ADD R6, R3 // add 15:8 to final result
+ADC R7, R4 // add 19:16 to final result
+MOV R2, R0
+MOVC5 R2, R1 // R1[7:0] x R0[16:12] which is 23:12 (but those bits are at 15:4)
+MOVC7 R3, R2 // stores 23:16; LSL R2, #8; moves shifted bits to R3
+MOV R4, R0 // R0 is irrelevant; moves stored bits to R4
+ADD R6, R3 // add 15:12 to final result
+ADC R7, R4 // add 23:16 to final result
+LSR R1, R1, #8 
+// R1[15:8] is shifted to R1[7:0] 
+// so multiplications involving R1[15:8] can be done
+MOV R2, R0 
+MOVC2 R2, R1 // R1[15:8] x R0[3:0] which is 19:8 (but those bits are at 11:0)
+MOVC6 R3, R2 // stores 19:16; LSL R2, #8; moves shifted bits to R3
+MOV R4, R0 // R0 is irrelevant; moves stored bits to R4
+ADD R6, R3 // add 15:8 to final result
+ADC R7, R4 // add 19:16 to final result
+MOV R2, R0 
+MOVC3 R2, R1 // R1[15:8] x R0[7:4] which is 23:12 (but those bits are at 15:4)
+MOVC7 R3, R2 // stores 23:16; LSL R2, #8; moves shifted bits to R3
+MOV R4, R0 // R0 is irrelevant; moves stored bits to R4
+ADD R6, R3 // add 15:12 to final result
+ADC R7, R4 // add 23:16 to final result
+MOV R2, R0 
+MOVC4 R2, R1 // R1[15:8] x R0[11:8] which is 27:16 (but those bits are at 11:0)
+ADD R7, R2 // add 27:16 to final result
+MOV R2, R0 
+MOVC5 R2, R1 // R1[15:8] x R0[15:12] which is 31:20 (but those bits are at 15:4)
+ADD R7, R2 // add 31:20 to final result
+// R7 = 0xB04C = 45132 (unsigned), R6 = 0xAAA8 = 43688 (unsigned)
+// 45132 x 2^16 + 43688 = 2957814440
+// which is equal to 62860 x 47054
+

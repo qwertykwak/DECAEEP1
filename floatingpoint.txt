@@ -1,0 +1,113 @@
+EXT #0x9E
+MOV R0, #0x5B // -0.006206512451171875
+STR R0, [#0x80]
+EXT #0x58
+MOV R1, #0xEC // 157.5
+STR R1, [#0x81]
+EXT #0x03
+MOV R2, #0xFF 
+AND R0, R0, R2
+AND R1, R1, R2
+// add 2^0 to significand
+EXT #0x04
+MOV R2, #0
+ADD R0, R0, R2
+ADD R1, R1, R2
+// start of unsigned multiplication of significand
+MOV R6, #0
+MOV R7, #0
+CMP R7, #1
+MOV R2, R0 
+MOVC2 R2, R1
+ADD R6, R2
+MOV R2, R0
+MOVC3 R2, R1
+ADD R6, R2
+MOV R2, R0 
+MOVC4 R2, R1
+MOVC6 R3, R2
+MOV R4, R0
+ADD R6, R3
+ADC R7, R4
+MOV R2, R0
+MOVC5 R2, R1
+MOVC7 R3, R2
+MOV R4, R0
+ADD R6, R3
+ADC R7, R4
+LSR R1, R1, #8
+MOV R2, R0 
+MOVC2 R2, R1
+MOVC6 R3, R2
+MOV R4, R0
+ADD R6, R3
+ADC R7, R4
+MOV R2, R0 
+MOVC3 R2, R1
+MOVC7 R3, R2
+MOV R4, R0
+ADD R6, R3
+ADC R7, R4
+MOV R2, R0 
+MOVC4 R2, R1
+ADD R7, R2
+MOV R2, R0 
+MOVC5 R2, R1
+ADD R7, R2
+// end of unsigned multiplication of significand
+// 10 digits of significand should be derived
+// from 22 or 21 digits of the result of unsigned multiplication
+MOV R1, #1
+MOV R2, #0x20
+MOV R3, #13
+MOV R4, #9
+MOV R5, #7
+CMP R7, R2
+JCS 6
+SUB R1, #1
+LSR R2, R2, #1
+ADD R3, #1
+ADD R4, #1
+SUB R5, #1
+CMP R4, #0
+JEQ 4
+LSR R6, R6, #1
+SUB R4, #1
+JMP -4
+CMP R5, #0
+JEQ 4
+LSL R7, R7, #1
+SUB R5, #1
+JMP -4
+ADD R6, R6, R7
+// now remove 2^0 from significand
+EXT #0x04
+SUB R6, #0
+STR R1, [#0x82]
+// calculate bias exponent
+LDR R0, [#0x80]
+LDR R1, [#0x81]
+EXT #0x7C
+MOV R2, #0
+AND R0, R0, R2
+AND R1, R1, R2
+ADD R2, R0, R1
+LSR R2, R2, #10
+SUB R2, #15
+LDR R1, [#0x82]
+ADD R2, R1, R2
+LSL R2, R2, #10
+ADD R3, R2, R6
+// sign can be found by adding the two sign bits 
+LDR R0, [#0x80]
+LDR R1, [#0x81]
+EXT #0x80
+MOV R2, #0
+AND R0, R0, R2
+AND R1, R1, R2
+ADD R2, R0, R1
+ADD R3, R2, R3
+// ISSIE derived 0xBBD1 = -0.97705078125
+// the actual answer of -0.006206512451171875 x 157.5 is -0.9775257111
+// 0xBBD2 = -0.9775390625
+// the software is valid since z(0xBBD2) < (actual answer) < z(0xBBD1)

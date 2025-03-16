@@ -1,0 +1,103 @@
+// signed multiplication
+EXT #0xD5
+MOV R0, #0xA2 // 0xD5A2 = -10846 (signed)
+EXT #0x54
+MOV R1, #0xF4 // 0x54F4 = 21748 (signed)
+MOV R6, #0
+MOV R7, #0 // initializing final result = R7:R6 (32 bit)
+// signed multiplication can be done by first operating unsigned multiplication
+// of the magnitude of two numbers 
+// and consider signs later
+// this method does not work if either number is 0x8000
+// which should be considered as an exception
+EXT #0x80
+MOV R2, #0x00 // R2 = 0b 1000 0000 0000 0000
+CMP R0, R2 // check for exception
+JNE 14 // skip exception if R0 is not 0x8000
+CMP R1, R2 // check for double exception
+JNE 4 // skip double exception if R1 is not 0x8000
+EXT #0x40
+MOV R7, #0x00 // R7:R6 = 0x4000 = 2^30
+JMP 72 // skip to end
+AND R3, R2, R1 // check sign bit of R1
+JEQ 3 // skip conversion if R1 is already positive
+MOVC1 R1, R1
+ADD R1, #1 // convert to 2's complement of R1 (always positive)
+LSR R7, R1, #1
+XSR R6, R6, #1 // |R1| * 2^15
+ADD R5, R3, R2 // R5 and R3 should have opposite signs
+JMP 58 // skip to address 81
+CMP R1, R2 // check for exception
+JNE 9 // skip exception if R1 is not 0x8000
+AND R3, R2, R0 // check sign bit of R0
+JEQ 3 // skip conversion if R1 is already positive
+MOVC1 R0, R0
+ADD R0, #1 // convert to 2's complement of R0 (always positive)
+LSR R7, R0, #1
+XSR R6, R6, #1 // |R0| * 2^15
+ADD R5, R3, R2 // R5 and R3 should have opposite signs
+JMP 48 // skip to address 81
+// if there is no exception
+// remove signs of R0 and R1
+// and store the information about signs in R5
+AND R3, R2, R0 // check sign bit of R0
+JEQ 3 // skip conversion if R0 is already positive
+MOVC1 R0, R0
+ADD R0, #1 // convert to 2's complement of R0 (always positive)
+AND R4, R2, R1 // check sign bit of R1
+JEQ 3 // skip conversion if R1 is already positive
+MOVC1 R1, R1
+ADD R1, #1 // convert to 2's complement of R1 (always positive)
+ADD R5, R3, R4 // R5 indicates whether the final answer should be inverted or not
+// instructions below do unsigned multiplication 
+// of magnitude of R0 and R1
+CMP R7, #1 // set FlagC = 0
+MOV R2, R0 
+MOVC2 R2, R1 // R1[7:0] x R0[3:0] which is 11:0
+ADD R6, R2 // add 11:0 to final result
+MOV R2, R0
+MOVC3 R2, R1 // R1[7:0] x R0[7:4] which is 15:4
+ADD R6, R2 // add 15:4 to final result
+MOV R2, R0 
+MOVC4 R2, R1 // R1[7:0] x R0[11:8] which is 19:8 (but those bits are at 11:0)
+MOVC6 R3, R2 // stores 19:16; LSL R2, #8; moves shifted bits to R3
+MOV R4, R0 // R0 is irrelevant; moves stored bits to R4
+ADD R6, R3 // add 15:8 to final result
+ADC R7, R4 // add 19:16 to final result
+MOV R2, R0
+MOVC5 R2, R1 // R1[7:0] x R0[16:12] which is 23:12 (but those bits are at 15:4)
+MOVC7 R3, R2 // stores 23:16; LSL R2, #8; moves shifted bits to R3
+MOV R4, R0 // R0 is irrelevant; moves stored bits to R4
+ADD R6, R3 // add 15:12 to final result
+ADC R7, R4 // add 23:16 to final result
+LSR R1, R1, #8 
+// R1[15:8] is shifted to R1[7:0] 
+// so multiplications involving R1[15:8] can be done
+MOV R2, R0 
+MOVC2 R2, R1 // R1[15:8] x R0[3:0] which is 19:8 (but those bits are at 11:0)
+MOVC6 R3, R2 // stores 19:16; LSL R2, #8; moves shifted bits to R3
+MOV R4, R0 // R0 is irrelevant; moves stored bits to R4
+ADD R6, R3 // add 15:8 to final result
+ADC R7, R4 // add 19:16 to final result
+MOV R2, R0 
+MOVC3 R2, R1 // R1[15:8] x R0[7:4] which is 23:12 (but those bits are at 15:4)
+MOVC7 R3, R2 // stores 23:16; LSL R2, #8; moves shifted bits to R3
+MOV R4, R0 // R0 is irrelevant; moves stored bits to R4
+ADD R6, R3 // add 15:12 to final result
+ADC R7, R4 // add 23:16 to final result
+MOV R2, R0 
+MOVC4 R2, R1 // R1[15:8] x R0[11:8] which is 27:16 (but those bits are at 11:0)
+ADD R7, R2 // add 27:16 to final result
+MOV R2, R0 
+MOVC5 R2, R1 // R1[15:8] x R0[15:12] which is 31:20 (but those bits are at 15:4)
+ADD R7, R2 // add 31:20 to final result
+CMP R5, #1 // check R5 
+JCC 5 // skip conversion if final result should be positive
+MOVC1 R6, R6 
+MOVC1 R7, R7
+ADD R6, #1 
+ADC R7, #0 // convert to 2's complement of R1 
+// R7 = 0xF1F0 = -3600 (signed), R6 = 0xC668 = 50792 (unsigned)
+// R6 should be unsigned since only R7 involves signed bit of R7:R6
+// -3600 x 2^16 + 50792 = -235878808
+// which is equal to -10846 x 21748
