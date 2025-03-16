@@ -1,0 +1,7 @@
+MOV R5, #3    
+MOV R6, #255
+MOV R7, #13
+CMP R5, R6   
+CMP R5, #3   
+AND R0, R5, R7
+AND R0, #0x10

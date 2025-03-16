@@ -1,0 +1,21 @@
+EXT #0xF5
+MOV R0, #0x8C // 62860
+EXT #0xB7
+MOV R1, #0xCE // 47054
+MOV R5, #0
+MOV R4, #0
+MOV R3, #0
+MOV R2, R1 // initializing op1 (R0), op2 (R1), sum (R5:R4) and op2_shifted (R3:R2)
+CMP R0, #1 // check whether R0 = 0x0
+JCC 11 // end the loop if R0 = 0x0
+MOV R6, R0 
+AND R6, #1 // filter out LSB of R0
+CMP R6, #1 // check whether LSB of R0 = 1
+JCC 3 // skip addition if LSB of R0 = 0 (equivalent to adding 0 * R1)
+ADD R4, R4, R2 
+ADC R5, R5, R3 // add op2_shifted to sum
+ADD R2, R2, R2 
+ADC R3, R3, R3 // multiply R1 by 2
+LSR R0, R0, #1 // make second LSB of R0 to first LSB (choosing next higher bit of R0)
+JMP -11 // jump back to CMP R0, #1
+

@@ -1,0 +1,5 @@
+MOV R5, #3 
+MOV R0, R5
+ADD R0, R5, R0
+ADD R2, #3
+
